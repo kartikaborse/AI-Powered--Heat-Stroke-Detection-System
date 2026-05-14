@@ -154,13 +154,13 @@ Example features:
 
 # Screenshots
 
-Add project screenshots here.
+
 
 ```bash
-<img width="1600" height="718" alt="sensors " src="https://github.com/user-attachments/assets/188fb919-2948-45d5-b14b-0c9813f75a25" />
-<img width="856" height="1448" alt="pic1" src="https://github.com/user-attachments/assets/b2c6bf7c-dc10-4c15-a5cd-486b7e169986" />
-<img width="1036" height="616" alt="pic2" src="https://github.com/user-attachments/assets/56df8b4c-c9b4-433c-b760-7719f5425997" />
-<img width="1032" height="592" alt="pic3" src="https://github.com/user-attachments/assets/0427c2d8-b4a8-4ff0-8465-db9794051dda" />
+<img width="1600" height="718" alt="sensors " src="https://github.com/user-attachments/assets/0e8bed9a-0ef8-4c5e-b11f-6ced66ecc37f" />
+<img width="1032" height="592" alt="pic3" src="https://github.com/user-attachments/assets/5df6fdb1-912c-4605-a0b7-ec1564dd72d0" />
+<img width="1036" height="616" alt="pic2" src="https://github.com/user-attachments/assets/fdd53cfb-1287-4f5a-8ff7-19575db32804" />
+<img width="856" height="1448" alt="pic1" src="https://github.com/user-attachments/assets/fb41ad83-15e9-4b5a-963d-a5b5c27b624e" />
 
 ```
 
