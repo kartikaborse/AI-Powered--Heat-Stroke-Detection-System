@@ -34,8 +34,8 @@ This system helps identify early warning signs using artificial intelligence tec
 ## Programming Languages
 
 * Python
-* JavaScript (optional frontend)
-* HTML/CSS (optional frontend)
+* JavaScript 
+* HTML/CSS 
 
 ## Machine Learning & AI
 
@@ -59,9 +59,9 @@ This system helps identify early warning signs using artificial intelligence tec
 ## Hardware & Sensors (Optional)
 
 * Temperature Sensor
-* Heart Rate Sensor
+
 * Humidity Sensor
-* Wearable Devices
+
 
 ---
 
