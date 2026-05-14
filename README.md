@@ -166,7 +166,7 @@ Add project screenshots here.
 
 ---
 
-# API Endpoints (Optional)
+# API Endpoints 
 
 | Method | Endpoint | Description              |
 | ------ | -------- | ------------------------ |
