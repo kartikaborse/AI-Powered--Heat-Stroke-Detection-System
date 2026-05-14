@@ -1,0 +1,47 @@
+=================================================================
+  RANDOM FOREST — HEAT STROKE RISK PREDICTION REPORT
+=================================================================
+
+Dataset        : heatstrokedataset.csv
+Total samples  : 4889
+Train samples  : 3911
+Test samples   : 978
+Features used  : 9
+
+BEST HYPERPARAMETERS:
+  class_weight           = None
+  max_depth              = None
+  max_features           = sqrt
+  min_samples_leaf       = 1
+  min_samples_split      = 2
+  n_estimators           = 100
+
+CV Accuracy    : 100.00% ± 0.00%
+Test Accuracy  : 100.00%
+Precision (W)  : 100.00%
+Recall    (W)  : 100.00%
+F1-Score  (W)  : 100.00%
+ROC-AUC  (OvR) : 1.0000
+
+CLASSIFICATION REPORT:
+              precision    recall  f1-score   support
+
+     No Risk     1.0000    1.0000    1.0000       350
+    Low Risk     1.0000    1.0000    1.0000       278
+ Medium Risk     1.0000    1.0000    1.0000       200
+   High Risk     1.0000    1.0000    1.0000       150
+
+    accuracy                         1.0000       978
+   macro avg     1.0000    1.0000    1.0000       978
+weighted avg     1.0000    1.0000    1.0000       978
+
+FEATURE IMPORTANCES:
+  body_temp                  0.2327
+  heat_index                 0.2197
+  ambient_temp               0.2059
+  body_temp_deviation        0.1928
+  hour                       0.0575
+  temp_humidity_stress       0.0453
+  duration                   0.0181
+  humidity                   0.0157
+  time_of_day                0.0124

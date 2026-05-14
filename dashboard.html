@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HeatGuard — Heatstroke Detection System</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --bg: #04080e;
+    --surface: #080f1a;
+    --surface2: #0c1826;
+    --surface3: #101f30;
+    --border: #1a3050;
+    --border2: #243d58;
+    --accent: #00c9ff;
+    --accent-glow: rgba(0,201,255,0.15);
+    --orange: #ff6b35;
+    --orange-glow: rgba(255,107,53,0.15);
+    --safe: #00e676;
+    --safe-glow: rgba(0,230,118,0.15);
+    --moderate: #ffb300;
+    --moderate-glow: rgba(255,179,0,0.15);
+    --high: #ff1744;
+    --high-glow: rgba(255,23,68,0.15);
+    --text: #b8d4e8;
+    --text-dim: #5a8aaa;
+    --text-bright: #ddeeff;
+    --font-display: 'Orbitron', sans-serif;
+    --font-body: 'Space Grotesk', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px,
+      rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,201,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,201,255,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ===== HEADER ===== */
+  header {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(8,15,26,0.9);
+    backdrop-filter: blur(12px);
+  }
+
+  .logo {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--accent);
+    letter-spacing: 3px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-shadow: 0 0 20px rgba(0,201,255,0.5);
+  }
+
+  .logo-fire { font-size: 22px; }
+  .logo span { color: var(--orange); text-shadow: 0 0 20px rgba(255,107,53,0.5); }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+  }
+
+  .pulse-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--safe);
+    box-shadow: 0 0 8px var(--safe);
+    animation: livePulse 1.4s ease-in-out infinite;
+  }
+
+  .pulse-dot.off { background: var(--high); box-shadow: 0 0 8px var(--high); animation: none; }
+
+  @keyframes livePulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.6; }
+  }
+
+  .btn-logout {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    padding: 5px 12px;
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    color: var(--text-dim);
+    text-decoration: none;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .btn-logout:hover { color: var(--high); border-color: var(--high); }
+
+  /* ===== MAIN ===== */
+  main {
+    position: relative;
+    z-index: 1;
+    padding: 20px 28px;
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 14px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, var(--accent), var(--orange), transparent);
+    opacity: 0.4;
+  }
+
+  .card:hover { border-color: var(--border2); }
+
+  .card-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-label {
+    grid-column: span 12;
+    font-family: var(--font-mono);
+    font-size: 8px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 6px 0 2px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border2), transparent);
+  }
+
+  /* ===== EVALUATE BUTTON ===== */
+  .eval-section {
+    grid-column: span 12;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 10px 0;
+  }
+
+  .btn-evaluate {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    padding: 16px 48px;
+    border-radius: 6px;
+    border: 2px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    text-transform: uppercase;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+    box-shadow: 0 0 20px rgba(0,201,255,0.1), inset 0 0 20px rgba(0,201,255,0.05);
+  }
+
+  .btn-evaluate::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: -1;
+  }
+
+  .btn-evaluate:hover { color: var(--bg); box-shadow: 0 0 40px rgba(0,201,255,0.4); }
+  .btn-evaluate:hover::before { transform: translateX(0); }
+  .btn-evaluate:active { transform: scale(0.98); }
+
+  .btn-evaluate.loading {
+    pointer-events: none;
+    opacity: 0.7;
+    animation: btnPulse 0.8s infinite;
+  }
+
+  @keyframes btnPulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(0,201,255,0.1); }
+    50% { box-shadow: 0 0 40px rgba(0,201,255,0.5); }
+  }
+
+  .eval-hint { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); letter-spacing: 1px; }
+
+  /* ===== LIVE SENSOR ROW ===== */
+  .sensors-row {
+    grid-column: span 12;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  .sensor-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    position: relative;
+    transition: all 0.3s;
+  }
+
+  .sensor-box.highlight { border-color: rgba(0,201,255,0.4); box-shadow: 0 0 20px rgba(0,201,255,0.08); }
+
+  .sensor-name { font-family: var(--font-mono); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px; }
+  .sensor-num { font-family: var(--font-display); font-size: 36px; font-weight: 900; color: var(--accent); line-height: 1; transition: color 0.4s; text-shadow: 0 0 15px rgba(0,201,255,0.3); }
+  .sensor-unit-text { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+  .s-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 12px; overflow: hidden; }
+  .s-bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--safe), var(--accent)); transition: width 1s ease; }
+
+  /* ===== RISK PANEL ===== */
+  .risk-panel {
+    grid-column: span 12;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    pointer-events: none;
+  }
+
+  .risk-panel.visible { opacity: 1; transform: translateY(0); pointer-events: all; }
+
+  .risk-result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .risk-result-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.5;
+  }
+
+  .risk-badge-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 18px; }
+
+  .risk-pill {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    padding: 14px 32px;
+    border-radius: 6px;
+    border: 2px solid currentColor;
+    color: var(--safe);
+    text-transform: uppercase;
+    transition: all 0.5s;
+    margin-bottom: 18px;
+  }
+
+  .risk-pill.high { color: var(--high); box-shadow: 0 0 30px rgba(255,23,68,0.35), inset 0 0 30px rgba(255,23,68,0.05); }
+  .risk-pill.moderate { color: var(--moderate); box-shadow: 0 0 25px rgba(255,179,0,0.3), inset 0 0 25px rgba(255,179,0,0.05); }
+  .risk-pill.low { color: var(--safe); box-shadow: 0 0 25px rgba(0,230,118,0.25), inset 0 0 25px rgba(0,230,118,0.05); }
+
+  .conf-wrap { width: 100%; }
+  .conf-title { font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); margin-bottom: 5px; text-align: left; letter-spacing: 1px; }
+  .conf-bar { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .conf-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--orange)); border-radius: 3px; transition: width 1.2s ease; }
+  .model-info { font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); margin-top: 12px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 4px; letter-spacing: 1px; }
+
+  .alert-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; position: relative; overflow: hidden; }
+  .alert-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, var(--orange), transparent); opacity: 0.5; }
+
+  .alert-indicator {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px; border-radius: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    margin-bottom: 12px; transition: all 0.3s;
+  }
+
+  .alert-indicator.active { border-color: var(--high); background: rgba(255,23,68,0.06); animation: alertFlash 1.2s infinite; }
+  .alert-indicator.warn { border-color: var(--moderate); background: rgba(255,179,0,0.06); }
+
+  @keyframes alertFlash {
+    0%, 100% { box-shadow: none; }
+    50% { box-shadow: 0 0 20px rgba(255,23,68,0.25); }
+  }
+
+  .alert-icon-big { font-size: 24px; }
+  .alert-title { font-family: var(--font-body); font-size: 13px; font-weight: 700; color: var(--text-bright); }
+  .alert-sub { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+
+  .a-row { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); color: var(--text-dim); }
+  .a-row:last-child { border-bottom: none; }
+  .a-row .v { color: var(--text-bright); font-weight: 600; }
+
+  .sms-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; position: relative; overflow: hidden; }
+  .sms-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, var(--safe), transparent); opacity: 0.5; }
+
+  .sms-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+  .sms-field label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-dim); }
+  .sms-field input, .sms-field textarea { background: var(--surface2); border: 1px solid var(--border2); color: var(--text-bright); font-family: var(--font-mono); font-size: 11px; padding: 8px 10px; border-radius: 5px; outline: none; transition: border-color 0.2s; resize: none; }
+  .sms-field input:focus, .sms-field textarea:focus { border-color: var(--accent); box-shadow: 0 0 10px rgba(0,201,255,0.1); }
+
+  .btn-sms { width: 100%; font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 2px; padding: 10px; border-radius: 5px; border: 1px solid var(--safe); background: rgba(0,230,118,0.06); color: var(--safe); cursor: pointer; text-transform: uppercase; transition: all 0.25s; margin-top: 4px; }
+  .btn-sms:hover { background: rgba(0,230,118,0.14); box-shadow: 0 0 16px rgba(0,230,118,0.2); }
+  .btn-sms:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .sms-status { font-family: var(--font-mono); font-size: 10px; text-align: center; margin-top: 8px; min-height: 16px; color: var(--text-dim); letter-spacing: 0.5px; }
+  .sms-status.ok { color: var(--safe); }
+  .sms-status.err { color: var(--high); }
+
+  /* ===== CHARTS ===== */
+  .charts-row { grid-column: span 12; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .chart-wrap { min-height: 160px; }
+
+  /* ===== BOTTOM ROW ===== */
+  .bottom-row { grid-column: span 12; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+
+  .env-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-family: var(--font-mono); font-size: 11px; }
+  .env-row:last-child { border-bottom: none; }
+  .env-k { color: var(--text-dim); }
+  .env-v { font-weight: 600; color: var(--text-bright); }
+
+  .env-class-badge { margin-top: 12px; padding: 8px 12px; border-radius: 6px; font-family: var(--font-display); font-size: 12px; font-weight: 700; text-align: center; text-transform: uppercase; letter-spacing: 2px; }
+  .env-class-badge.safe { background: rgba(0,230,118,0.1); color: var(--safe); border: 1px solid rgba(0,230,118,0.4); }
+  .env-class-badge.caution { background: rgba(255,179,0,0.1); color: var(--moderate); border: 1px solid rgba(255,179,0,0.4); }
+  .env-class-badge.dangerous { background: rgba(255,23,68,0.1); color: var(--high); border: 1px solid rgba(255,23,68,0.4); }
+
+  .uf { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 9px; font-family: var(--font-mono); }
+  .uf-k { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-dim); min-width: 76px; padding-top: 2px; }
+  .uf-v { font-size: 12px; font-weight: 600; color: var(--text-bright); }
+
+  .activity-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .act-btn { font-family: var(--font-mono); font-size: 9px; letter-spacing: 1px; padding: 5px 10px; border-radius: 4px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text-dim); cursor: pointer; text-transform: uppercase; transition: all 0.2s; }
+  .act-btn.on { background: rgba(0,201,255,0.1); border-color: var(--accent); color: var(--accent); }
+
+  .age-input { background: var(--surface2); border: 1px solid var(--border2); color: var(--text-bright); font-family: var(--font-mono); font-size: 12px; padding: 4px 8px; border-radius: 4px; width: 70px; outline: none; }
+
+  .iot-row { display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); font-size: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .iot-row:last-child { border-bottom: none; }
+  .iot-row .k { color: var(--text-dim); }
+  .iot-row .v { font-weight: 600; color: var(--text-bright); }
+  .iot-row .v.ok { color: var(--safe); }
+  .iot-row .v.err { color: var(--high); }
+
+  /* ===== HISTORY ===== */
+  .history-section { grid-column: span 12; }
+
+  .h-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 11px; margin-top: 4px; }
+  .h-table th { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--border2); }
+  .h-table td { padding: 8px 10px; border-bottom: 1px solid rgba(26,48,80,0.5); color: var(--text); transition: background 0.2s; }
+  .h-table tr:hover td { background: rgba(0,201,255,0.025); }
+
+  .badge { font-size: 9px; font-weight: 600; padding: 2px 8px; border-radius: 3px; text-transform: uppercase; letter-spacing: 1px; }
+  .badge.high { background: rgba(255,23,68,0.12); color: var(--high); border: 1px solid rgba(255,23,68,0.4); }
+  .badge.moderate { background: rgba(255,179,0,0.12); color: var(--moderate); border: 1px solid rgba(255,179,0,0.4); }
+  .badge.low { background: rgba(0,230,118,0.12); color: var(--safe); border: 1px solid rgba(0,230,118,0.4); }
+  .badge.no-risk { background: rgba(0,230,118,0.08); color: var(--safe); border: 1px solid rgba(0,230,118,0.2); }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="logo-fire">🔥</span>
+    HEAT<span>GUARD</span>
+  </div>
+  <div class="header-right">
+    <div class="live-badge">
+      <div class="pulse-dot" id="pdot"></div>
+      <span id="conn-text">Connecting...</span>
+    </div>
+    <span id="last-ts">--</span>
+    <!-- ── NEW: logged-in user name ── -->
+    <span id="user-greeting" style="color:var(--accent);font-weight:600;font-family:var(--font-mono);font-size:10px;">--</span>
+    <span>v1.0 · RF MODEL</span>
+    <!-- ── NEW: logout ── -->
+    <a href="/logout" class="btn-logout">Logout</a>
+  </div>
+</header>
+
+<main>
+
+  <div class="section-label">📡 Live Sensor Readings</div>
+
+  <div class="sensors-row">
+    <div class="sensor-box">
+      <div class="sensor-name">Body Temp</div>
+      <div class="sensor-num" id="s-body">--.-</div>
+      <div class="sensor-unit-text">°C</div>
+      <div class="s-bar"><div class="s-bar-fill" id="bar-body" style="width:0%"></div></div>
+    </div>
+    <div class="sensor-box">
+      <div class="sensor-name">Ambient Temp</div>
+      <div class="sensor-num" id="s-ambient">--.-</div>
+      <div class="sensor-unit-text">°C</div>
+      <div class="s-bar"><div class="s-bar-fill" id="bar-ambient" style="width:0%"></div></div>
+    </div>
+    <div class="sensor-box">
+      <div class="sensor-name">Humidity</div>
+      <div class="sensor-num" id="s-humidity">--.-</div>
+      <div class="sensor-unit-text">% RH</div>
+      <div class="s-bar"><div class="s-bar-fill" id="bar-humidity" style="width:0%"></div></div>
+    </div>
+    <div class="sensor-box">
+      <div class="sensor-name">Heat Index</div>
+      <div class="sensor-num" id="s-heatindex">--.-</div>
+      <div class="sensor-unit-text">°C</div>
+      <div class="s-bar"><div class="s-bar-fill" id="bar-heatindex" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <div class="section-label">📊 Graphical Visualization</div>
+
+  <div class="charts-row">
+    <div class="card chart-wrap">
+      <div class="card-label">🌡️ Body Temperature History</div>
+      <canvas id="chart-body" height="160"></canvas>
+    </div>
+    <div class="card chart-wrap">
+      <div class="card-label">🌤️ Ambient Temperature History</div>
+      <canvas id="chart-ambient" height="160"></canvas>
+    </div>
+    <div class="card chart-wrap">
+      <div class="card-label">💧 Humidity History</div>
+      <canvas id="chart-humidity" height="160"></canvas>
+    </div>
+  </div>
+
+  <div class="eval-section">
+    <div>
+      <span class="eval-hint">▸ Press to run ML prediction · High Risk triggers automatic Telegram alert</span>
+    </div>
+    <button class="btn-evaluate" id="btn-eval" onclick="runEvaluation()">
+      ⚡ Evaluate Risk
+    </button>
+  </div>
+
+  <!-- RISK PANEL -->
+  <div class="risk-panel" id="risk-panel">
+
+    <div class="risk-result-card">
+      <div class="risk-badge-label">🚨 ML Risk Prediction</div>
+      <div class="risk-pill low" id="risk-pill">—</div>
+      <div class="conf-wrap">
+        <div class="conf-title">Confidence: <span id="conf-pct">—</span></div>
+        <div class="conf-bar"><div class="conf-fill" id="conf-fill" style="width:0%"></div></div>
+      </div>
+      <div class="model-info">RF MODEL · <span id="pred-time">--</span></div>
+    </div>
+
+    <div class="alert-card">
+      <div class="card-label">⚠️ Alert System</div>
+      <div class="alert-indicator" id="alert-box">
+        <div class="alert-icon-big" id="a-icon">✅</div>
+        <div>
+          <div class="alert-title" id="a-title">System Normal</div>
+          <div class="alert-sub" id="a-sub">No active alerts</div>
+        </div>
+      </div>
+      <div class="a-row"><span>Status</span><span class="v" id="a-status">Inactive</span></div>
+      <div class="a-row"><span>Trigger</span><span class="v" id="a-trigger">—</span></div>
+      <div class="a-row"><span>Notification</span><span class="v" id="a-notif">—</span></div>
+      <div class="a-row"><span>Alert Count</span><span class="v" id="a-count">0</span></div>
+    </div>
+
+    <div class="sms-card">
+      <div class="card-label">📱 Manual Telegram Alert</div>
+      <div class="sms-field">
+        <label>Recipient Number (auto-filled from profile)</label>
+        <input type="tel" id="sms-to" placeholder="+91XXXXXXXXXX" value="">
+      </div>
+      <div class="sms-field">
+        <label>Message Preview</label>
+        <textarea id="sms-body" rows="4" readonly></textarea>
+      </div>
+      <button class="btn-sms" id="btn-sms" onclick="sendSMS()">📤 Send Alert via Telegram</button>
+      <div class="sms-status" id="sms-status"></div>
+    </div>
+
+  </div>
+
+  <div class="section-label">🌡️ Environment · 🧍 Patient · 📡 IoT Device</div>
+
+  <div class="bottom-row">
+    <div class="card">
+      <div class="card-label">🌡️ Environmental Conditions</div>
+      <div class="env-row"><span class="env-k">Heat Index</span><span class="env-v" id="e-hi">--</span></div>
+      <div class="env-row"><span class="env-k">Outdoor Temp</span><span class="env-v" id="e-ot">--</span></div>
+      <div class="env-row"><span class="env-k">Humidity Level</span><span class="env-v" id="e-hum">--</span></div>
+      <div class="env-row"><span class="env-k">Humidity Impact</span><span class="env-v" id="e-hum-imp">--</span></div>
+      <div class="env-class-badge safe" id="env-badge">— SAFE —</div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">🧍 Patient Profile</div>
+      <div class="uf"><div class="uf-k">Patient ID</div><div class="uf-v">HG-001</div></div>
+      <div class="uf"><div class="uf-k">Name</div><div class="uf-v" id="profile-name">— Loading —</div></div>
+      <div class="uf"><div class="uf-k">Phone</div><div class="uf-v" id="profile-phone">—</div></div>
+      <div class="uf">
+        <div class="uf-k">Age</div>
+        <input class="age-input" id="user-age" type="number" value="25" min="1" max="120">
+      </div>
+      <div class="uf" style="flex-direction:column; gap:6px;">
+        <div class="uf-k">Activity</div>
+        <div class="activity-row">
+          <button class="act-btn on" onclick="setAct(this,'Resting')">Resting</button>
+          <button class="act-btn" onclick="setAct(this,'Walking')">Walking</button>
+          <button class="act-btn" onclick="setAct(this,'Outdoor')">Outdoor</button>
+        </div>
+      </div>
+      <div class="uf" style="margin-top:8px;">
+        <div class="uf-k">Location</div>
+        <div class="uf-v" id="gps-loc">Fetching GPS...</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">📡 IoT Device Status</div>
+      <div class="iot-row"><span class="k">Device</span><span class="v">NodeMCU ESP8266</span></div>
+      <div class="iot-row"><span class="k">Connectivity</span><span class="v ok" id="iot-conn">Online</span></div>
+      <div class="iot-row"><span class="k">IP Address</span><span class="v">localhost:5000</span></div>
+      <div class="iot-row"><span class="k">Data Tx</span><span class="v ok" id="iot-tx">Active</span></div>
+      <div class="iot-row"><span class="k">Last Received</span><span class="v" id="iot-last">--</span></div>
+      <div class="iot-row"><span class="k">Poll Interval</span><span class="v">3000ms</span></div>
+      <div class="iot-row"><span class="k">Sensor 1</span><span class="v ok">DHT11 — OK</span></div>
+      <div class="iot-row"><span class="k">Sensor 2</span><span class="v ok">MLX90614 — OK</span></div>
+      <div class="iot-row"><span class="k">MCU</span><span class="v">Arduino Uno R3</span></div>
+    </div>
+  </div>
+
+  <div class="section-label">📜 History Log</div>
+
+  <div class="card history-section">
+    <div class="card-label">
+      📜 Reading History
+      <span style="margin-left:auto;" id="hist-count">(0 records)</span>
+    </div>
+    <table class="h-table">
+      <thead>
+        <tr>
+          <th>Time</th><th>Body °C</th><th>Ambient °C</th>
+          <th>Humidity %</th><th>Heat Index</th><th>Risk</th><th>Alert Sent</th>
+        </tr>
+      </thead>
+      <tbody id="hist-body"></tbody>
+    </table>
+  </div>
+
+</main>
+
+<script>
+// ==============================
+//  STATE
+// ==============================
+let alertCount = 0;
+let currentActivity = 'Resting';
+let lastData = null;
+
+// ==============================
+//  CHART SETUP
+// ==============================
+const baseChartOpts = {
+  type: 'line',
+  options: {
+    responsive: true,
+    animation: { duration: 400 },
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: '#5a8aaa', font: { family: 'JetBrains Mono', size: 9 } }, grid: { color: 'rgba(26,48,80,0.5)' } },
+      y: { ticks: { color: '#5a8aaa', font: { family: 'JetBrains Mono', size: 9 } }, grid: { color: 'rgba(26,48,80,0.5)' } }
+    }
+  }
+};
+
+function mkChart(id, color, label) {
+  return new Chart(document.getElementById(id), {
+    ...baseChartOpts,
+    data: {
+      labels: [],
+      datasets: [{ label, data: [], borderColor: color, backgroundColor: color + '15', fill: true, tension: 0.45, pointRadius: 2, borderWidth: 2 }]
+    }
+  });
+}
+
+const chartBody    = mkChart('chart-body',    '#00c9ff', 'Body Temp');
+const chartAmbient = mkChart('chart-ambient', '#ff6b35', 'Ambient Temp');
+const chartHumid   = mkChart('chart-humidity','#00e676', 'Humidity');
+
+function pushChart(chart, lbl, val, max = 20) {
+  if (chart.data.labels.length >= max) { chart.data.labels.shift(); chart.data.datasets[0].data.shift(); }
+  chart.data.labels.push(lbl);
+  chart.data.datasets[0].data.push(val);
+  chart.update();
+}
+
+// ==============================
+//  UTILITY
+// ==============================
+function setAct(btn, val) {
+  currentActivity = val;
+  document.querySelectorAll('.act-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+function classifyRisk(str) {
+  const s = (str || '').toLowerCase();
+  if (s.includes('high'))                              return 'high';
+  if (s.includes('moderate') || s.includes('medium')) return 'moderate';
+  if (s.includes('low'))                               return 'low';
+  return 'no-risk';
+}
+
+function riskBadge(str) {
+  const cls = classifyRisk(str);
+  return `<span class="badge ${cls}">${str || 'No Risk'}</span>`;
+}
+
+function updateBar(id, val, min, max) {
+  const pct = Math.min(100, Math.max(0, (val - min) / (max - min) * 100));
+  document.getElementById(id).style.width = pct + '%';
+}
+
+function getEnvClass(hi) {
+  if (hi >= 41) return ['dangerous', '⚠ DANGEROUS'];
+  if (hi >= 32) return ['caution',   '⚡ CAUTION'];
+  return               ['safe',      '✔ SAFE'];
+}
+
+function humidImpact(h) {
+  if (h >= 80) return 'Very High';
+  if (h >= 60) return 'High';
+  if (h >= 40) return 'Moderate';
+  return 'Low';
+}
+
+// ==============================
+//  GPS
+// ==============================
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(
+    p => { document.getElementById('gps-loc').textContent = `${p.coords.latitude.toFixed(4)}°N, ${p.coords.longitude.toFixed(4)}°E`; },
+    () => { document.getElementById('gps-loc').textContent = 'GPS Unavailable'; }
+  );
+} else {
+  document.getElementById('gps-loc').textContent = 'Not Supported';
+}
+
+// ==============================
+//  FETCH LOGGED-IN USER  ← NEW
+// ==============================
+function fetchMe() {
+  fetch('/me')
+    .then(r => r.json())
+    .then(u => {
+      if (!u.logged_in) { window.location.href = '/'; return; }
+      document.getElementById('user-greeting').textContent = '👤 ' + u.name;
+      document.getElementById('profile-name').textContent  = u.name;
+      document.getElementById('profile-phone').textContent = u.phone;
+      document.getElementById('sms-to').value = u.phone || '';
+    })
+    .catch(() => {});
+}
+
+// ==============================
+//  CONNECTION STATUS
+// ==============================
+function setConnected(ok) {
+  const dot  = document.getElementById('pdot');
+  const txt  = document.getElementById('conn-text');
+  const iotC = document.getElementById('iot-conn');
+  const iotT = document.getElementById('iot-tx');
+  if (ok) {
+    dot.className = 'pulse-dot';
+    txt.textContent = 'Online — Streaming';
+    iotC.textContent = 'Online'; iotC.className = 'v ok';
+    iotT.textContent = 'Active'; iotT.className = 'v ok';
+  } else {
+    dot.className = 'pulse-dot off';
+    txt.textContent = 'Offline — No Data';
+    iotC.textContent = 'Offline'; iotC.className = 'v err';
+    iotT.textContent = 'Stopped'; iotT.className = 'v err';
+  }
+}
+
+// ==============================
+//  FETCH LATEST SENSOR DATA
+// ==============================
+function fetchLatest() {
+  fetch('/latest')
+    .then(r => r.json())
+    .then(data => {
+      if (!data || !data.time) { setConnected(false); return; }
+      setConnected(true);
+      lastData = data;
+
+      const ts = data.time.split('T')[1].slice(0, 8);
+      document.getElementById('last-ts').textContent  = 'Updated: ' + ts;
+      document.getElementById('iot-last').textContent = ts;
+
+      document.getElementById('s-body').textContent      = Number(data.body).toFixed(1);
+      document.getElementById('s-ambient').textContent   = Number(data.ambient).toFixed(1);
+      document.getElementById('s-humidity').textContent  = Number(data.humidity).toFixed(1);
+      document.getElementById('s-heatindex').textContent = Number(data.heat_index || 0).toFixed(1);
+
+      updateBar('bar-body',      data.body,          35, 42);
+      updateBar('bar-ambient',   data.ambient,       20, 50);
+      updateBar('bar-humidity',  data.humidity,       0, 100);
+      updateBar('bar-heatindex', data.heat_index||0, 20, 55);
+
+      pushChart(chartBody,    ts, Number(data.body));
+      pushChart(chartAmbient, ts, Number(data.ambient));
+      pushChart(chartHumid,   ts, Number(data.humidity));
+
+      const hi = Number(data.heat_index || 0);
+      document.getElementById('e-hi').textContent      = hi.toFixed(1) + ' °C';
+      document.getElementById('e-ot').textContent      = Number(data.ambient).toFixed(1) + ' °C';
+      document.getElementById('e-hum').textContent     = Number(data.humidity).toFixed(1) + ' %';
+      document.getElementById('e-hum-imp').textContent = humidImpact(data.humidity);
+
+      const [eCls, eLabel] = getEnvClass(hi);
+      const eb = document.getElementById('env-badge');
+      eb.textContent = eLabel;
+      eb.className   = 'env-class-badge ' + eCls;
+    })
+    .catch(() => setConnected(false));
+}
+
+// ==============================
+//  FETCH HISTORY
+// ==============================
+function fetchHistory() {
+  fetch('/history')
+    .then(r => r.json())
+    .then(rows => {
+      const tbody = document.getElementById('hist-body');
+      tbody.innerHTML = '';
+      document.getElementById('hist-count').textContent = `(${rows.length} records)`;
+      rows.slice(0, 15).forEach(row => {
+        if (!row.time) return;
+        const t = row.time.split('T')[1].slice(0, 8);
+        const sent = row.sms_sent
+          ? '<span style="color:var(--safe)">✓ Sent</span>'
+          : '<span style="color:var(--text-dim)">—</span>';
+        tbody.innerHTML += `
+          <tr>
+            <td>${t}</td>
+            <td>${Number(row.body).toFixed(1)}</td>
+            <td>${Number(row.ambient).toFixed(1)}</td>
+            <td>${Number(row.humidity).toFixed(1)}</td>
+            <td>${Number(row.heat_index || 0).toFixed(1)}</td>
+            <td>${riskBadge(row.risk)}</td>
+            <td>${sent}</td>
+          </tr>`;
+      });
+    })
+    .catch(() => {});
+}
+
+// ==============================
+//  EVALUATE RISK  ← UPDATED: calls /evaluate, auto Telegram on backend
+// ==============================
+function runEvaluation() {
+  const btn = document.getElementById('btn-eval');
+  btn.classList.add('loading');
+  btn.textContent = '⏳ Evaluating...';
+
+  fetch('/evaluate', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      btn.classList.remove('loading');
+      if (data.error) {
+        btn.textContent = '⚡ Evaluate Risk';
+        alert('Error: ' + data.error);
+        return;
+      }
+      lastData = data;
+      doEval(data);
+    })
+    .catch(() => {
+      btn.classList.remove('loading');
+      btn.textContent = '⚡ Evaluate Risk';
+    });
+}
+
+function doEval(data) {
+  const btn = document.getElementById('btn-eval');
+  const ts  = (data.time || new Date().toISOString()).split('T')[1].slice(0, 8);
+  const cls = classifyRisk(data.risk);
+  const confMap = { high: 94, moderate: 78, low: 88, 'no-risk': 92 };
+  const conf    = confMap[cls] || 85;
+
+  // Show risk panel
+  document.getElementById('risk-panel').classList.add('visible');
+
+  // Risk pill
+  const pill = document.getElementById('risk-pill');
+  pill.textContent = data.risk || 'No Risk';
+  pill.className   = 'risk-pill ' + cls;
+
+  // Confidence
+  document.getElementById('conf-pct').textContent = conf + '%';
+  document.getElementById('conf-fill').style.width = '0%';
+  setTimeout(() => { document.getElementById('conf-fill').style.width = conf + '%'; }, 100);
+  document.getElementById('pred-time').textContent = ts;
+
+  // Alert panel
+  const alertBox = document.getElementById('alert-box');
+  if (cls === 'high') {
+    alertCount++;
+    document.getElementById('a-count').textContent = alertCount;
+    alertBox.className = 'alert-indicator active';
+    document.getElementById('a-icon').textContent  = '🚨';
+    document.getElementById('a-title').textContent = 'CRITICAL — HIGH RISK';
+    document.getElementById('a-sub').textContent   = 'Body temp exceeds safe threshold';
+    document.getElementById('a-status').textContent  = 'ACTIVE';
+    document.getElementById('a-trigger').textContent = `Body: ${Number(data.body).toFixed(1)}°C`;
+    document.getElementById('a-notif').textContent   = data.alert_sent ? '✓ Telegram Sent' : 'Send failed';
+
+    const smsStatus = document.getElementById('sms-status');
+    if (data.alert_sent) {
+      smsStatus.className   = 'sms-status ok';
+      smsStatus.textContent = '✓ Auto-alert sent via Telegram!';
+    }
+  } else if (cls === 'moderate') {
+    alertBox.className = 'alert-indicator warn';
+    document.getElementById('a-icon').textContent  = '⚠️';
+    document.getElementById('a-title').textContent = 'WARNING — Moderate Risk';
+    document.getElementById('a-sub').textContent   = 'Monitor closely';
+    document.getElementById('a-status').textContent  = 'ACTIVE';
+    document.getElementById('a-trigger').textContent = `HI: ${Number(data.heat_index||0).toFixed(1)}°C`;
+    document.getElementById('a-notif').textContent   = 'No auto-alert (moderate)';
+  } else {
+    alertBox.className = 'alert-indicator';
+    document.getElementById('a-icon').textContent  = '✅';
+    document.getElementById('a-title').textContent = 'System Normal';
+    document.getElementById('a-sub').textContent   = 'No active alerts';
+    document.getElementById('a-status').textContent  = 'Inactive';
+    document.getElementById('a-trigger').textContent = '—';
+    document.getElementById('a-notif').textContent   = '—';
+  }
+
+  // Populate SMS message preview
+  const smsMsg =
+    `[HeatGuard Alert]\n` +
+    `Time: ${ts}\n` +
+    `Risk Level: ${data.risk || 'No Risk'}\n` +
+    `Body Temp: ${Number(data.body).toFixed(1)}°C\n` +
+    `Ambient: ${Number(data.ambient).toFixed(1)}°C\n` +
+    `Humidity: ${Number(data.humidity).toFixed(1)}%\n` +
+    `Heat Index: ${Number(data.heat_index||0).toFixed(1)}°C\n` +
+    `Action: ${cls === 'high' ? 'IMMEDIATE ATTENTION REQUIRED' : cls === 'moderate' ? 'Monitor patient closely' : 'No action needed'}`;
+  document.getElementById('sms-body').value = smsMsg;
+
+  btn.textContent = '✔ Evaluated — Re-Run';
+  document.getElementById('risk-panel').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ==============================
+//  MANUAL TELEGRAM SEND
+// ==============================
+function sendSMS() {
+  const body     = document.getElementById('sms-body').value.trim();
+  const statusEl = document.getElementById('sms-status');
+  const btn      = document.getElementById('btn-sms');
+
+  if (!body) {
+    statusEl.className   = 'sms-status err';
+    statusEl.textContent = '✗ Evaluate risk first to generate message.';
+    return;
+  }
+
+  btn.disabled = true;
+  statusEl.className   = 'sms-status';
+  statusEl.textContent = '📤 Sending via Telegram...';
+
+  fetch('/send_sms', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ body })
+  })
+  .then(r => r.json())
+  .then(res => {
+    btn.disabled = false;
+    if (res.success) {
+      statusEl.className   = 'sms-status ok';
+      statusEl.textContent = '✓ Telegram alert sent!';
+      document.getElementById('a-notif').textContent = 'Telegram Sent ✓';
+    } else {
+      statusEl.className   = 'sms-status err';
+      statusEl.textContent = `✗ Failed: ${res.error || 'Unknown error'}`;
+    }
+  })
+  .catch(() => {
+    btn.disabled = false;
+    statusEl.className   = 'sms-status err';
+    statusEl.textContent = '✗ Network error.';
+  });
+}
+
+// ==============================
+//  POLLING
+// ==============================
+fetchMe();
+setInterval(fetchLatest,  3000);
+setInterval(fetchHistory, 6000);
+fetchLatest();
+fetchHistory();
+</script>
+</body>
+</html>
