@@ -56,7 +56,7 @@ This system helps identify early warning signs using artificial intelligence tec
 
 * MySQL / MongoDB / Firebase
 
-## Hardware & Sensors (Optional)
+## Hardware & Sensors
 
 * Temperature Sensor
 
